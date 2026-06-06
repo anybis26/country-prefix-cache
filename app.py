@@ -177,6 +177,9 @@ def refresh_worker():
             print("RIPE returned empty ASN list, abort refresh")
 
             state["last_update"] = int(time.time())
+            state["asns_list"] = []
+            state["asns"] = 0
+
             return
 
         prefixes = set()
@@ -215,6 +218,10 @@ def refresh_worker():
 
         if not prefixes:
             print("No prefixes collected, skipping DB write")
+
+            state["last_update"] = int(time.time())
+            state["prefixes"] = 0
+
             return
 
         save_prefixes(prefixes)
