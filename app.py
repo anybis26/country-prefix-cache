@@ -160,15 +160,24 @@ def save_prefixes(prefixes):
 def refresh_worker():
     """Background refresh."""
 
+    lock_acquired = False
+
     if not refresh_lock.acquire(blocking=False):
         return
 
+    lock_acquired = True
     state["running"] = True
 
     try:
         print("Starting RU refresh...")
 
         asns = fetch_ru_asns()
+
+        if not asns:
+            print("RIPE returned empty ASN list, abort refresh")
+
+            state["last_update"] = int(time.time())
+            return
 
         prefixes = set()
 
@@ -191,7 +200,6 @@ def refresh_worker():
 
                 try:
                     data = future.result()
-
                     prefixes.update(data)
 
                 except Exception as exc:
@@ -204,6 +212,10 @@ def refresh_worker():
                     )
 
         prefixes.discard("0.0.0.0/0")
+
+        if not prefixes:
+            print("No prefixes collected, skipping DB write")
+            return
 
         save_prefixes(prefixes)
 
@@ -218,7 +230,9 @@ def refresh_worker():
 
     finally:
         state["running"] = False
-        refresh_lock.release()
+
+        if lock_acquired:
+            refresh_lock.release()
 
 
 # ----------------------------------------------------
@@ -227,17 +241,11 @@ def refresh_worker():
 
 @app.get("/health")
 def health():
-    """Health endpoint."""
-
-    return {
-        "status": "ok"
-    }
+    return {"status": "ok"}
 
 
 @app.get("/status")
 def status():
-    """Refresh status."""
-
     return {
         "running": state["running"],
         "last_update": state["last_update"],
@@ -248,8 +256,6 @@ def status():
 
 @app.get("/prefixes")
 def prefixes():
-    """Return cached RU prefixes."""
-
     data = get_prefixes()
 
     return JSONResponse(
@@ -264,12 +270,9 @@ def prefixes():
 
 @app.post("/refresh")
 def refresh():
-    """Start background refresh."""
 
     if state["running"]:
-        return {
-            "status": "already_running"
-        }
+        return {"status": "already_running"}
 
     thread = threading.Thread(
         target=refresh_worker,
@@ -278,19 +281,8 @@ def refresh():
 
     thread.start()
 
-    return {
-        "status": "started"
-    }
+    return {"status": "started"}
 
-@app.get("/asns")
-def asns():
-    """Return RU ASN list."""
-
-    return {
-        "status": "ok",
-        "count": len(state.get("asns_list", [])),
-        "asns": state.get("asns_list", [])
-    }
 
 # ----------------------------------------------------
 
