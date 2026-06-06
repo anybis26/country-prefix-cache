@@ -257,7 +257,7 @@ def status():
         "running": state["running"],
         "last_update": state["last_update"],
         "prefixes": state["prefixes"],
-        "asns": state["asns"]
+        "asns": state["asns"],
         "asns_list": state.get("asns_list", [])
     }
 
