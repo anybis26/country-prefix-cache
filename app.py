@@ -28,7 +28,8 @@ state = {
     "running": False,
     "last_update": 0,
     "prefixes": 0,
-    "asns": 0
+    "asns": 0,
+    "asns_list": []
 }
 
 
@@ -172,6 +173,7 @@ def refresh_worker():
         prefixes = set()
 
         state["asns"] = len(asns)
+        state["asns_list"] = asns
 
         with ThreadPoolExecutor(max_workers=20) as executor:
 
@@ -280,6 +282,15 @@ def refresh():
         "status": "started"
     }
 
+@app.get("/asns")
+def asns():
+    """Return RU ASN list."""
+
+    return {
+        "status": "ok",
+        "count": len(state.get("asns_list", [])),
+        "asns": state.get("asns_list", [])
+    }
 
 # ----------------------------------------------------
 
