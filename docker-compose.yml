@@ -1,0 +1,17 @@
+services:
+  ru-prefix-cache:
+    build: .
+
+    container_name: ru-prefix-cache
+
+    restart: unless-stopped
+
+    ports:
+      - "8082:8080"
+
+    environment:
+      DB: /data/ru-prefixes.db
+      ASN_CACHE_URL: http://172.17.0.1:8080
+
+    volumes:
+      - ./data:/data
